@@ -17,6 +17,14 @@
       "transport": {
         "type": "stdio"
       }
+    },
+    {
+      "registryType": "npm",
+      "identifier": "@cleanlanguage/mcp",
+      "version": "0.33.188",
+      "transport": {
+        "type": "stdio"
+      }
     }
   ]
 }

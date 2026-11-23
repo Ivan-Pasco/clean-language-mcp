@@ -1,0 +1,22 @@
+{
+  "name": "@cleanlanguage/mcp",
+  "version": "0.0.0",
+  "description": "Clean Language MCP server: write, check and compile Clean Language code from your AI assistant. Compiler included.",
+  "mcpName": "dev.cleanlanguage/clean-language",
+  "license": "MIT",
+  "homepage": "https://cleanlanguage.dev",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Ivan-Pasco/clean-language-mcp.git"
+  },
+  "bugs": "https://github.com/Ivan-Pasco/clean-language-mcp/issues",
+  "keywords": ["mcp", "mcp-server", "clean-language", "programming-language", "compiler", "webassembly", "wasm"],
+  "bin": {
+    "clean-language-mcp": "bin/clean-language-mcp.js"
+  },
+  "files": ["bin", "README.md"],
+  "engines": {
+    "node": ">=18"
+  },
+  "optionalDependencies": {}
+}

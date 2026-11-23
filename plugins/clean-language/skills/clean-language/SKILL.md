@@ -14,7 +14,7 @@ its own: do not write it from memory or from what JavaScript, Python or Rust wou
    with the topic, or `list_builtins` / `list_types` for built-in names.
 3. Run `check` on every piece of code you write before showing it. Fix every
    error it reports; use `explain_error` when an error code is unclear.
-4. Use `compile` to produce WebAssembly and `run` to execute a program and see
-   its output.
+4. Use `compile` to produce WebAssembly. These tools do not execute programs:
+   to run one, the user needs the Clean toolchain (https://cleanlanguage.dev/install).
 
 The language website is https://cleanlanguage.dev.

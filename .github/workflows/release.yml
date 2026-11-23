@@ -1,8 +1,12 @@
-name: Release bundle
+name: Release
 
-# Wraps the latest compiler release into the MCP bundle, publishes it as a
-# release of this repo, and updates the MCP Registry entry.
+# Packages the latest compiler release three ways and publishes each one:
+#   1. clean-language-mcp.mcpb  -> GitHub release of this repo
+#   2. @cleanlanguage/mcp       -> npm (launcher + one package per platform)
+#   3. registry entry           -> MCP Registry, as dev.cleanlanguage/clean-language
+# Then pins the plugin to the new npm version.
 # Runs daily so a new compiler release is picked up without manual steps.
+# Every step checks what is already published, so a failed run can be re-run.
 
 on:
   workflow_dispatch:
@@ -16,6 +20,11 @@ on:
 
 permissions:
   contents: write
+  id-token: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
 
 jobs:
   release:
@@ -28,6 +37,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+          registry-url: https://registry.npmjs.org
 
       - name: Resolve compiler version
         id: ver
@@ -38,11 +48,19 @@ jobs:
           fi
           v="${v#v}"
           echo "version=$v" >> "$GITHUB_OUTPUT"
+
           if gh release view "v$v" --repo "${{ github.repository }}" >/dev/null 2>&1; then
             echo "released=true" >> "$GITHUB_OUTPUT"
           else
             echo "released=false" >> "$GITHUB_OUTPUT"
           fi
+
+          if npm view "@cleanlanguage/mcp@$v" version >/dev/null 2>&1; then
+            echo "on_npm=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "on_npm=false" >> "$GITHUB_OUTPUT"
+          fi
+
           name="$(jq -r .name server.json | sed 's#/#%2F#g')"
           code="$(curl -s -o /dev/null -w '%{http_code}' "https://registry.modelcontextprotocol.io/v0.1/servers/$name/versions/$v")"
           if [ "$code" = "200" ]; then
@@ -51,6 +69,7 @@ jobs:
             echo "listed=false" >> "$GITHUB_OUTPUT"
           fi
 
+      # ── 1. MCP bundle on GitHub ───────────────────────────────────────────
       - name: Build bundle
         if: steps.ver.outputs.released == 'false'
         run: bash scripts/build-bundle.sh "${{ steps.ver.outputs.version }}"
@@ -64,8 +83,8 @@ jobs:
             --title "Clean Language MCP v$v" \
             --notes "Packages Clean Language compiler v$v."
 
-      # A release from an earlier run whose registry step failed: reuse its
-      # server.json so the checksum matches the bundle already published.
+      # A release from an earlier run: reuse its server.json so the checksum
+      # matches the bundle already published.
       - name: Fetch registry entry from existing release
         if: steps.ver.outputs.released == 'true' && steps.ver.outputs.listed == 'false'
         run: |
@@ -73,6 +92,28 @@ jobs:
           gh release download "v${{ steps.ver.outputs.version }}" --repo "${{ github.repository }}" \
             --pattern server.json --dir build
 
+      # ── 2. npm ────────────────────────────────────────────────────────────
+      - name: Build npm packages
+        if: steps.ver.outputs.on_npm == 'false'
+        run: bash scripts/build-npm.sh "${{ steps.ver.outputs.version }}"
+
+      # Platform packages first: the launcher lists them as dependencies.
+      - name: Publish npm packages
+        if: steps.ver.outputs.on_npm == 'false'
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          v="${{ steps.ver.outputs.version }}"
+          for dir in build/npm/mcp-* build/npm/mcp; do
+            name="$(jq -r .name "$dir/package.json")"
+            if npm view "$name@$v" version >/dev/null 2>&1; then
+              echo "$name@$v already published"
+              continue
+            fi
+            (cd "$dir" && npm publish --access public --provenance)
+          done
+
+      # ── 3. MCP Registry ───────────────────────────────────────────────────
       - name: Install cosign
         if: steps.ver.outputs.listed == 'false'
         uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6
@@ -104,3 +145,25 @@ jobs:
           cp build/server.json server.json
           ./mcp-publisher login http --domain cleanlanguage.dev
           ./mcp-publisher publish
+
+      # ── 4. Pin the plugin to this version ─────────────────────────────────
+      - name: Pin plugin to the npm version
+        run: |
+          v="${{ steps.ver.outputs.version }}"
+          if ! npm view "@cleanlanguage/mcp@$v" version >/dev/null 2>&1; then
+            echo "@cleanlanguage/mcp@$v is not on npm; plugin left unchanged"
+            exit 0
+          fi
+          git checkout -- server.json
+          f=plugins/clean-language/.claude-plugin/plugin.json
+          jq --arg v "$v" '.version = $v | .mcpServers = {"clean-language": {"command": "npx", "args": ["-y", ("@cleanlanguage/mcp@" + $v)]}}' "$f" > "$f.tmp"
+          mv "$f.tmp" "$f"
+          if git diff --quiet -- "$f"; then
+            echo "plugin already pinned to $v"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add "$f"
+          git commit -m "chore(plugin): pin to @cleanlanguage/mcp@$v"
+          git push

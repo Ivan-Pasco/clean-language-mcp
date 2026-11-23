@@ -64,6 +64,7 @@ jq --arg v "$VERSION" --arg url "$URL" --arg sha "$SHA" '
     .version = $v
     | .packages[0].identifier = $url
     | .packages[0].fileSha256 = $sha
+    | .packages[1].version = $v
 ' "$ROOT/server.json" > "$WORK/server.json"
 cp "$WORK/server.json" "$ROOT/server.json"
 
