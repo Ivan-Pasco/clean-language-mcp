@@ -9,9 +9,24 @@
   "homepage": "https://cleanlanguage.dev",
   "repository": "https://github.com/Ivan-Pasco/clean-language-mcp",
   "license": "MIT",
-  "keywords": ["clean-language", "programming-language", "compiler", "webassembly", "wasm"],
+  "keywords": [
+    "clean-language",
+    "programming-language",
+    "compiler",
+    "webassembly",
+    "wasm"
+  ],
   "icon": "./icon.png",
   "documentationUrl": "https://cleanlanguage.dev",
   "supportUrl": "https://github.com/Ivan-Pasco/clean-language-mcp/issues",
-  "mcpServers": "https://github.com/Ivan-Pasco/clean-language-mcp/releases/latest/download/clean-language-mcp.mcpb"
+  "mcpServers": {
+    "clean-language": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@cleanlanguage/mcp@0.33.188"
+      ]
+    }
+  },
+  "version": "0.33.188"
 }
