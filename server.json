@@ -1,0 +1,22 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "dev.cleanlanguage/clean-language",
+  "title": "Clean Language",
+  "description": "Write, check and compile Clean Language code: a type-safe language that compiles to WebAssembly.",
+  "websiteUrl": "https://cleanlanguage.dev",
+  "repository": {
+    "url": "https://github.com/Ivan-Pasco/clean-language-mcp",
+    "source": "github"
+  },
+  "version": "0.33.188",
+  "packages": [
+    {
+      "registryType": "mcpb",
+      "identifier": "https://github.com/Ivan-Pasco/clean-language-mcp/releases/download/v0.33.188/clean-language-mcp.mcpb",
+      "fileSha256": "a672ebb33036341bb2a1208759897d95177fe0dd72c63812c7f909e4f8fe2133",
+      "transport": {
+        "type": "stdio"
+      }
+    }
+  ]
+}

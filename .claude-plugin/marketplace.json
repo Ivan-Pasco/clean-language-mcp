@@ -1,0 +1,19 @@
+{
+  "name": "clean-language",
+  "owner": {
+    "name": "Clean Language",
+    "url": "https://cleanlanguage.dev"
+  },
+  "metadata": {
+    "description": "Tools for writing Clean Language, a type-safe language that compiles to WebAssembly."
+  },
+  "plugins": [
+    {
+      "name": "clean-language",
+      "source": "./plugins/clean-language",
+      "description": "Write, check and compile Clean Language code. Includes the compiler; nothing else to install.",
+      "category": "development",
+      "homepage": "https://cleanlanguage.dev"
+    }
+  ]
+}

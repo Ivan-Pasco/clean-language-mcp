@@ -1,0 +1,41 @@
+{
+  "manifest_version": "0.3",
+  "name": "clean-language",
+  "display_name": "Clean Language",
+  "version": "0.0.0",
+  "description": "Write, check and compile Clean Language code from your AI assistant.",
+  "long_description": "Clean Language is a type-safe language that compiles to WebAssembly, with JavaScript-like readability and Rust-like safety. This server gives AI assistants the language reference, the full specification, a type checker, the compiler and a runner, so they write correct Clean code instead of guessing. The compiler is included; nothing else needs to be installed.",
+  "author": {
+    "name": "Clean Language",
+    "url": "https://cleanlanguage.dev"
+  },
+  "homepage": "https://cleanlanguage.dev",
+  "documentation": "https://cleanlanguage.dev",
+  "support": "https://github.com/Ivan-Pasco/clean-language-mcp/issues",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Ivan-Pasco/clean-language-mcp"
+  },
+  "icon": "icon.png",
+  "keywords": ["clean-language", "programming-language", "compiler", "webassembly", "wasm"],
+  "license": "MIT",
+  "compatibility": {
+    "platforms": ["darwin", "linux", "win32"]
+  },
+  "server": {
+    "type": "binary",
+    "entry_point": "server/darwin/cln",
+    "mcp_config": {
+      "command": "${__dirname}/server/darwin/cln",
+      "args": ["mcp-server"],
+      "platform_overrides": {
+        "linux": {
+          "command": "${__dirname}/server/linux/cln"
+        },
+        "win32": {
+          "command": "${__dirname}/server/win32/cln.exe"
+        }
+      }
+    }
+  }
+}

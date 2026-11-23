@@ -1,0 +1,17 @@
+{
+  "name": "clean-language",
+  "displayName": "Clean Language",
+  "description": "Write, check and compile Clean Language code: a type-safe language that compiles to WebAssembly. Includes the compiler; nothing else to install.",
+  "author": {
+    "name": "Clean Language",
+    "url": "https://cleanlanguage.dev"
+  },
+  "homepage": "https://cleanlanguage.dev",
+  "repository": "https://github.com/Ivan-Pasco/clean-language-mcp",
+  "license": "MIT",
+  "keywords": ["clean-language", "programming-language", "compiler", "webassembly", "wasm"],
+  "icon": "./icon.png",
+  "documentationUrl": "https://cleanlanguage.dev",
+  "supportUrl": "https://github.com/Ivan-Pasco/clean-language-mcp/issues",
+  "mcpServers": "https://github.com/Ivan-Pasco/clean-language-mcp/releases/latest/download/clean-language-mcp.mcpb"
+}

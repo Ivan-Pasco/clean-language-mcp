@@ -1,0 +1,106 @@
+name: Release bundle
+
+# Wraps the latest compiler release into the MCP bundle, publishes it as a
+# release of this repo, and updates the MCP Registry entry.
+# Runs daily so a new compiler release is picked up without manual steps.
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Compiler version to package (e.g. 0.33.188), or latest"
+        required: false
+        default: latest
+  schedule:
+    - cron: "30 6 * * *"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: macos-latest
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Resolve compiler version
+        id: ver
+        run: |
+          v="${{ github.event.inputs.version || 'latest' }}"
+          if [ "$v" = "latest" ]; then
+            v="$(gh release view --repo Ivan-Pasco/clean-language-compiler-old --json tagName -q .tagName)"
+          fi
+          v="${v#v}"
+          echo "version=$v" >> "$GITHUB_OUTPUT"
+          if gh release view "v$v" --repo "${{ github.repository }}" >/dev/null 2>&1; then
+            echo "released=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "released=false" >> "$GITHUB_OUTPUT"
+          fi
+          name="$(jq -r .name server.json | sed 's#/#%2F#g')"
+          code="$(curl -s -o /dev/null -w '%{http_code}' "https://registry.modelcontextprotocol.io/v0.1/servers/$name/versions/$v")"
+          if [ "$code" = "200" ]; then
+            echo "listed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "listed=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build bundle
+        if: steps.ver.outputs.released == 'false'
+        run: bash scripts/build-bundle.sh "${{ steps.ver.outputs.version }}"
+
+      - name: Publish GitHub release
+        if: steps.ver.outputs.released == 'false'
+        run: |
+          v="${{ steps.ver.outputs.version }}"
+          gh release create "v$v" build/clean-language-mcp.mcpb build/server.json \
+            --repo "${{ github.repository }}" \
+            --title "Clean Language MCP v$v" \
+            --notes "Packages Clean Language compiler v$v."
+
+      # A release from an earlier run whose registry step failed: reuse its
+      # server.json so the checksum matches the bundle already published.
+      - name: Fetch registry entry from existing release
+        if: steps.ver.outputs.released == 'true' && steps.ver.outputs.listed == 'false'
+        run: |
+          mkdir -p build
+          gh release download "v${{ steps.ver.outputs.version }}" --repo "${{ github.repository }}" \
+            --pattern server.json --dir build
+
+      - name: Install cosign
+        if: steps.ver.outputs.listed == 'false'
+        uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6
+
+      - name: Download and verify mcp-publisher
+        if: steps.ver.outputs.listed == 'false'
+        env:
+          MCP_PUBLISHER_VERSION: v1.8.15
+        run: |
+          set -euo pipefail
+          archive="mcp-publisher_darwin_arm64.tar.gz"
+          base_url="https://github.com/modelcontextprotocol/registry/releases/download/${MCP_PUBLISHER_VERSION}"
+          curl --fail --location --silent --show-error --output "$archive" "$base_url/$archive"
+          curl --fail --location --silent --show-error --output "$archive.sigstore.json" "$base_url/$archive.sigstore.json"
+          cosign verify-blob \
+            --bundle "$archive.sigstore.json" \
+            --certificate-identity "https://github.com/modelcontextprotocol/registry/.github/workflows/release.yml@refs/tags/${MCP_PUBLISHER_VERSION}" \
+            --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
+            "$archive"
+          tar xzf "$archive" mcp-publisher
+
+      # Signs in as the owner of cleanlanguage.dev; the matching public key is
+      # served at https://cleanlanguage.dev/.well-known/mcp-registry-auth.
+      - name: Publish to MCP Registry
+        if: steps.ver.outputs.listed == 'false'
+        env:
+          MCP_PRIVATE_KEY: ${{ secrets.MCP_PRIVATE_KEY }}
+        run: |
+          cp build/server.json server.json
+          ./mcp-publisher login http --domain cleanlanguage.dev
+          ./mcp-publisher publish
